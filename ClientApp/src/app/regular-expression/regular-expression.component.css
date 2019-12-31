@@ -1,0 +1,15 @@
+.fullWidth {
+  width: 800px;
+}
+
+.customBorder {
+  border-width: 2px;
+}
+.customMargin {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  margin-left: 5px;
+}
+.fixedWidth {
+  width: 100px !important;
+}

@@ -126,7 +126,7 @@ namespace RegularExpressionParser.Services
                     ret.MatchInfo.Add(
                        new MatchInfo()
                        {
-                           MatchString = regularExpression.SearchString.Substring(foundStart, foundEnd),
+                           MatchString = "Use Index To Find Out :)",
                            StartIndex = foundStart,
                            EndIndex = foundEnd,
                            Length = matchLength
@@ -170,7 +170,7 @@ namespace RegularExpressionParser.Services
                     ret.MatchInfo.Add(
                        new MatchInfo()
                        {
-                           MatchString = regularExpression.SearchString.Substring(foundStart, foundEnd),
+                           MatchString = "Use Index To Find Out :)",
                            StartIndex = foundStart,
                            EndIndex = foundEnd,
                            Length = matchLength

@@ -761,30 +761,38 @@ namespace RegularExpressionParser.BusinessLogic
             argSBStats.AppendLine("Original pattern:\t\t" + argPattern);
             argSBStats.AppendLine("Pattern after formatting:\t" + vi.FormattedString);
             argSBStats.AppendLine("Pattern after postfix:\t\t" + regExpressionPostfix);
-            argSBStats.AppendLine();
+            argSBStats.AppendLine(Environment.NewLine);
 
             TransitionState stateStartNfa = CreateNfa(regExpressionPostfix);
-            argSBStats.AppendLine();
+            argSBStats.AppendLine(Environment.NewLine);
             argSBStats.AppendLine("NFA Table:");
+
             lineLength = GetSerializedFsa(stateStartNfa, argSBStats);
+
             argSBStats.AppendFormat(("").PadRight(lineLength, '*'));
-            argSBStats.AppendLine();
+            argSBStats.AppendLine(Environment.NewLine);
 
             TransitionState.ResetCounter();
             TransitionState stateStartDfa = ConvertToDfa(stateStartNfa);
-            argSBStats.AppendLine();
+
+            argSBStats.AppendLine(Environment.NewLine);
+
             argSBStats.AppendLine("DFA Table:");
+
             lineLength = GetSerializedFsa(stateStartDfa, argSBStats);
+
             argSBStats.AppendFormat(("").PadRight(lineLength, '*'));
-            argSBStats.AppendLine();
+            argSBStats.AppendLine(Environment.NewLine);
 
             TransitionState stateStartDfaM = ReduceDfa(stateStartDfa);
             _startingDFAState = stateStartDfaM;
-            argSBStats.AppendLine();
+            argSBStats.AppendLine(Environment.NewLine);
+
             argSBStats.AppendLine("DFA M' Table:");
+
             lineLength = GetSerializedFsa(stateStartDfaM, argSBStats);
             argSBStats.AppendFormat(("").PadRight(lineLength, '*'));
-            argSBStats.AppendLine();
+            argSBStats.AppendLine(Environment.NewLine);
 
             return CompilationStatus.SUCCESS;
         }

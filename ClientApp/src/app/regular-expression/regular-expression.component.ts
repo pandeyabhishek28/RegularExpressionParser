@@ -1,5 +1,6 @@
 import { Component, OnInit, Inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
+import { ExpressionOutput } from "./expressionOutput";
 
 @Component({
   selector: "app-regular-expression",
@@ -24,48 +25,39 @@ export class RegularExpressionComponent implements OnInit {
       searchString: this.searchString
     };
     this.http
-      .post<ExpressionInput>(
+      .post<ExpressionOutput>(
         this._baseUrl + "RegularExpression/PostStatistics",
         str
       )
       .subscribe(
         result => {
+          this.Result = result;
           console.error(result);
         },
         error => console.error(error)
       );
   }
   evaluateExpression() {
-    var json = JSON.stringify({
-      Expression: this.expression,
-      SearchString: this.searchString
-    });
+    var str = {
+      expression: this.expression,
+      searchString: this.searchString
+    };
     this.http
-      .get<ExpressionOutput>(
-        this._baseUrl +
-          "RegularExpression/GetStatistics" +
-          "?regularExpression=" +
-          encodeURIComponent(json)
+      .post<ExpressionOutput>(
+        this._baseUrl + "RegularExpression/PostStatistics",
+        str
       )
       .subscribe(
         result => {
           this.Result = result;
+          console.error(result);
         },
         error => console.error(error)
       );
   }
-  getALL() {
-    var json = JSON.stringify({
-      Expression: this.expression,
-      SearchString: this.searchString
-    });
+  getAll() {
     this.http
-      .get<ExpressionOutput>(
-        this._baseUrl +
-          "RegularExpression/GetAll" +
-          "?regularExpression=" +
-          encodeURIComponent(json)
-      )
+      .get<ExpressionOutput>(this._baseUrl + "RegularExpression/GetAll")
       .subscribe(
         result => {
           this.Result = result;
@@ -74,17 +66,8 @@ export class RegularExpressionComponent implements OnInit {
       );
   }
   getFirst() {
-    var json = JSON.stringify({
-      Expression: this.expression,
-      SearchString: this.searchString
-    });
     this.http
-      .get<ExpressionOutput>(
-        this._baseUrl +
-          "RegularExpression/GetFirst" +
-          "?regularExpression=" +
-          encodeURIComponent(json)
-      )
+      .get<ExpressionOutput>(this._baseUrl + "RegularExpression/GetFirst")
       .subscribe(
         result => {
           this.Result = result;
@@ -93,17 +76,8 @@ export class RegularExpressionComponent implements OnInit {
       );
   }
   getNext() {
-    var json = JSON.stringify({
-      Expression: this.expression,
-      SearchString: this.searchString
-    });
     this.http
-      .get<ExpressionOutput>(
-        this._baseUrl +
-          "RegularExpression/GetNext" +
-          "?regularExpression=" +
-          encodeURIComponent(json)
-      )
+      .get<ExpressionOutput>(this._baseUrl + "RegularExpression/GetNext")
       .subscribe(
         result => {
           this.Result = result;
@@ -116,17 +90,4 @@ export class RegularExpressionComponent implements OnInit {
 interface ExpressionInput {
   expression: string;
   searchString: string;
-}
-interface ExpressionOutput {
-  outputText: string;
-  errorText: string;
-  completedSuccesfully: string;
-  matchInfo: MatchInfo[];
-}
-
-interface MatchInfo {
-  matchString: string;
-  startIndex: number;
-  endIndex: number;
-  length: number;
 }

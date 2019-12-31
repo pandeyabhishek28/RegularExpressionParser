@@ -5,8 +5,8 @@ using RegularExpressionParser.Services;
 
 namespace RegularExpressionParser.Controllers
 {
-    [Route("api/[controller]/[action]")]
     [ApiController]
+    [Route("[controller]")]
     public class RegularExpressionController : ControllerBase
     {
         private IRegularExpressionService _regularExpressionService;
@@ -19,8 +19,7 @@ namespace RegularExpressionParser.Controllers
             _logger = logger;
         }
 
-        [HttpPost]
-        [ActionName("PostStatistics")]
+        [HttpPost("PostStatistics")]
         public ExpressionRecognizerOutput PostStatistics([FromBody]ExpressionRecognizerInput regularExpression)
         {
             var ret = _regularExpressionService.EvaluateExpression(regularExpression);
@@ -28,7 +27,7 @@ namespace RegularExpressionParser.Controllers
             return ret;
         }
 
-        [HttpGet]
+        [HttpGet("GetAll")]
         [ActionName("GetAll")]
         public ExpressionRecognizerOutput GetAllMatch()
         {
@@ -36,7 +35,7 @@ namespace RegularExpressionParser.Controllers
             return ret;
         }
 
-        [HttpGet]
+        [HttpGet("GetFirst")]
         [ActionName("GetFirst")]
         public ExpressionRecognizerOutput GetFirstMatch()
         {
@@ -44,7 +43,7 @@ namespace RegularExpressionParser.Controllers
             return ret;
         }
 
-        [HttpGet]
+        [HttpGet("GetNext")]
         [ActionName("GetNext")]
         public ExpressionRecognizerOutput GetNextMatch()
         {
@@ -52,11 +51,5 @@ namespace RegularExpressionParser.Controllers
             return ret;
         }
 
-        [Route("{*url}", Order = 999)]
-        public IActionResult CatchAll()
-        {
-            Response.StatusCode = 404;
-            return Ok();
-        }
     }
 }

@@ -1,1 +1,62 @@
-<p>regular-expression works!</p>
+<h1 id="tableLabel">Expression Works!</h1>
+<p>This component demonstrates Regular Expression.</p>
+<div>
+  <div>
+    Expression
+    <input
+      type="text"
+      [(ngModel)]="expression"
+      class="fullWidth customBorder customMargin"
+    />
+  </div>
+  <div>
+    Search String
+    <input
+      type="text"
+      [(ngModel)]="searchString"
+      class="fullWidth customBorder customMargin"
+    />
+  </div>
+  <div>
+    <button class="customMargin" (click)="evaluateExpression()">Compile</button>
+    <button class="customMargin" (click)="getAll()">Find All Match</button>
+    <button class="customMargin" (click)="getFirst()">Find Next</button>
+    <button class="customMargin" (click)="getNext()">Find First</button>
+  </div>
+</div>
+<div>
+  <div style="white-space:pre-line;">
+    <table class="table table-striped" aria-labelledby="tableLabel">
+      <thead>
+        <tr>
+          <th>Statistics</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ Result.outputText }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div *ngIf="Result.matchInfo.length > 0">
+    <table class="table table-striped" aria-labelledby="tableLabel">
+      <thead>
+        <tr>
+          <th>Match String</th>
+          <th>Start Index</th>
+          <th>End Index</th>
+          <th>Length</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let info of Result.matchInfo">
+          <td>{{ info.matchString }}</td>
+          <td>{{ info.startIndex }}</td>
+          <td>{{ info.endIndex }}</td>
+          <td>{{ info.length }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
