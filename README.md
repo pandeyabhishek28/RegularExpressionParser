@@ -7,7 +7,7 @@ I don't think it would be too difficult to port this demo code to C++ if you wan
 
 
 References:-
-Mr. Mike Clark's  notes
-Writing own regular expression parser By Amer Gerzic
-Regular Expression Matching Can Be Simple And Fast by Russ Cox
-Regular Expression by Mizan Rahman
+Mr. Mike Clark's  notes.
+Writing own regular expression parser By Amer Gerzic.
+Regular Expression Matching Can Be Simple And Fast by Russ Cox.
+Regular Expression by Mizan Rahman.
