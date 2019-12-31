@@ -1,6 +1,5 @@
 import { Component, OnInit, Inject } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { url } from "inspector";
 
 @Component({
   selector: "app-regular-expression",
