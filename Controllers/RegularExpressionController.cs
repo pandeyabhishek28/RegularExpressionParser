@@ -11,7 +11,7 @@ namespace RegularExpressionParser.Controllers
     {
         private IRegularExpressionService _regularExpressionService;
         private ILogger<RegularExpressionController> _logger;
-
+        private static ExpressionRecognizerInput RegularExpression;
         public RegularExpressionController(IRegularExpressionService regularExpressionService,
             ILogger<RegularExpressionController> logger)
         {
@@ -19,36 +19,44 @@ namespace RegularExpressionParser.Controllers
             _logger = logger;
         }
 
-        [HttpGet]
-        [ActionName("GetStatistics")]
-        public ExpressionRecognizerOutput GetStatistics(ExpressionRecognizerInput regularExpression)
+        [HttpPost]
+        [ActionName("PostStatistics")]
+        public ExpressionRecognizerOutput PostStatistics([FromBody]ExpressionRecognizerInput regularExpression)
         {
             var ret = _regularExpressionService.EvaluateExpression(regularExpression);
+            RegularExpression = regularExpression;
             return ret;
         }
 
         [HttpGet]
         [ActionName("GetAll")]
-        public ExpressionRecognizerOutput GetAllMatch(ExpressionRecognizerInput regularExpression)
+        public ExpressionRecognizerOutput GetAllMatch()
         {
-            var ret = _regularExpressionService.FindAllMatch(regularExpression);
+            var ret = _regularExpressionService.FindAllMatch(RegularExpression);
             return ret;
         }
 
         [HttpGet]
         [ActionName("GetFirst")]
-        public ExpressionRecognizerOutput GetFirstMatch(ExpressionRecognizerInput regularExpression)
+        public ExpressionRecognizerOutput GetFirstMatch()
         {
-            var ret = _regularExpressionService.FindFirstMatch(regularExpression);
+            var ret = _regularExpressionService.FindFirstMatch(RegularExpression);
             return ret;
         }
 
         [HttpGet]
         [ActionName("GetNext")]
-        public ExpressionRecognizerOutput GetNextMatch(ExpressionRecognizerInput regularExpression)
+        public ExpressionRecognizerOutput GetNextMatch()
         {
-            var ret = _regularExpressionService.FindNextMatch(regularExpression);
+            var ret = _regularExpressionService.FindNextMatch(RegularExpression);
             return ret;
+        }
+
+        [Route("{*url}", Order = 999)]
+        public IActionResult CatchAll()
+        {
+            Response.StatusCode = 404;
+            return Ok();
         }
     }
 }
