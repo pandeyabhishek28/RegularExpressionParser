@@ -7,7 +7,7 @@ using System.Text;
 namespace RegularExpressionParser.BusinessLogic
 {
 
-    internal class ExpressionValidator
+    public class ExpressionValidator : IExpressionValidator
     {
         private const char _nullChar = '\0';
 

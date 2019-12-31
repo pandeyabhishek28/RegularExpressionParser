@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.SpaServices.AngularCli;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using RegularExpressionParser.BusinessLogic;
+using RegularExpressionParser.Services;
 
 namespace RegularExpressionParser
 {
@@ -21,6 +22,11 @@ namespace RegularExpressionParser
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllersWithViews();
+
+            services.AddSingleton<IExpressionValidator, ExpressionValidator>();
+            services.AddSingleton<IRegularExpressionRecognizer, RegularExpressionRecognizer>();
+            services.AddSingleton<IRegularExpressionService, RegularExpressionService>();
+
             // In production, the Angular files will be served from this directory
             services.AddSpaStaticFiles(configuration =>
             {

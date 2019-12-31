@@ -8,9 +8,9 @@ using System.Text;
 namespace RegularExpressionParser.BusinessLogic
 {
 
-    public class RegularExpressionRecognizer
+    public class RegularExpressionRecognizer : IRegularExpressionRecognizer
     {
-        static private ExpressionValidator _expressionValidator = new ExpressionValidator();
+        private IExpressionValidator _expressionValidator;
 
         private int _lastErrorIndex = -1;
         private int _lastErrorLength = -1;
@@ -32,9 +32,124 @@ namespace RegularExpressionParser.BusinessLogic
             }
         }
 
-        public RegularExpressionRecognizer()
+        public RegularExpressionRecognizer(IExpressionValidator expressionValidator)
         {
+            _expressionValidator = expressionValidator;
+        }
 
+        static void GetAllStateAndInput(TransitionState stateStart, Hashset setAllState, Hashset setInputSymbols)
+        {
+            Hashset setUnprocessed = new Hashset();
+
+            setUnprocessed.AddElement(stateStart);
+
+            while (setUnprocessed.Count > 0)
+            {
+                TransitionState state = (TransitionState)setUnprocessed[0];
+
+                setAllState.AddElement(state);
+                setUnprocessed.RemoveElement(state);
+
+                foreach (object objToken in state.GetAllKeys())
+                {
+                    string sSymbol = (string)objToken;
+                    setInputSymbols.AddElement(sSymbol);
+
+                    TransitionState[] arrTrans = state.GetTransitions(sSymbol);
+
+                    if (arrTrans != null)
+                    {
+                        foreach (TransitionState stateEpsilon in arrTrans)
+                        {
+                            if (!setAllState.ElementExist(stateEpsilon))
+                            {
+                                setUnprocessed.AddElement(stateEpsilon);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        static int GetSerializedFsa(TransitionState stateStart, StringBuilder sb)
+        {
+            Hashset setAllState = new Hashset();
+            Hashset setAllInput = new Hashset();
+            GetAllStateAndInput(stateStart, setAllState, setAllInput);
+            return GetSerializedFsa(stateStart, setAllState, setAllInput, sb);
+        }
+
+        static int GetSerializedFsa(TransitionState stateStart, Hashset setAllState,
+            Hashset setAllSymbols, StringBuilder sb)
+        {
+            int lineLength = 0;
+            int minWidth = 6;
+            string line = String.Empty;
+            string format = String.Empty;
+            setAllSymbols.RemoveElement(MetaSymbol.EPSILON);
+            setAllSymbols.AddElement(MetaSymbol.EPSILON);
+
+            object[] symbolObjects = new object[setAllSymbols.Count + 1];
+            symbolObjects[0] = "State";
+            format = "{0,-8}";
+            for (int i = 0; i < setAllSymbols.Count; i++)
+            {
+                string sSymbol = setAllSymbols[i].ToString();
+                symbolObjects[i + 1] = sSymbol;
+
+                format += " | ";
+                format += "{" + (i + 1).ToString() + ",-" + Math.Max(Math.Max(sSymbol.Length, minWidth), sSymbol.ToString().Length) + "}";
+            }
+
+            line = String.Format(format, symbolObjects);
+            lineLength = Math.Max(lineLength, line.Length);
+            sb.AppendLine(("").PadRight(lineLength, '-'));
+            sb.AppendLine(line);
+            sb.AppendLine(("").PadRight(lineLength, '-'));
+
+            int nTransCount = 0;
+            foreach (object objState in setAllState)
+            {
+                TransitionState state = (TransitionState)objState;
+                symbolObjects[0] = (state.Equals(stateStart) ? ">" + state.ToString() : state.ToString());
+
+                for (int i = 0; i < setAllSymbols.Count; i++)
+                {
+                    string sSymbol = setAllSymbols[i].ToString();
+
+                    TransitionState[] arrStateTo = state.GetTransitions(sSymbol);
+                    string sTo = String.Empty;
+                    if (arrStateTo != null)
+                    {
+                        nTransCount += arrStateTo.Length;
+                        sTo = arrStateTo[0].ToString();
+
+                        for (int j = 1; j < arrStateTo.Length; j++)
+                        {
+                            sTo += ", " + arrStateTo[j].ToString();
+                        }
+                    }
+                    else
+                    {
+                        sTo = "--";
+                    }
+                    symbolObjects[i + 1] = sTo;
+                }
+
+                line = String.Format(format, symbolObjects);
+                sb.AppendLine(line);
+                lineLength = Math.Max(lineLength, line.Length);
+            }
+
+            format = "State Count: {0}, Input Symbol Count: {1}, Transition Count: {2}";
+            line = String.Format(format, setAllState.Count, setAllSymbols.Count, nTransCount);
+            lineLength = Math.Max(lineLength, line.Length);
+            sb.AppendLine(("").PadRight(lineLength, '-'));
+            sb.AppendLine(line);
+            lineLength = Math.Max(lineLength, line.Length);
+            setAllSymbols.RemoveElement(MetaSymbol.EPSILON);
+
+            return lineLength;
         }
 
         private string ConvertToPostfix(string sInfixPattern)
@@ -126,86 +241,6 @@ namespace RegularExpressionParser.BusinessLogic
                 default:
                     return 5;
             }
-        }
-
-        public CompilationStatus CompileWithStats(string argPattern, StringBuilder argSBStats)
-        {
-            if (argSBStats == null)
-            {
-                return Compile(argPattern);
-            }
-
-            TransitionState.ResetCounter();
-
-            int lineLength = 0;
-
-            ValidationInfo vi = _expressionValidator.Validate(argPattern);
-
-            UpdateValidationInfo(vi);
-
-            if (vi.ErrorCode != CompilationStatus.SUCCESS)
-            {
-                return vi.ErrorCode;
-            }
-
-            string regExpressionPostfix = ConvertToPostfix(vi.FormattedString);
-
-            argSBStats.AppendLine("Original pattern:\t\t" + argPattern);
-            argSBStats.AppendLine("Pattern after formatting:\t" + vi.FormattedString);
-            argSBStats.AppendLine("Pattern after postfix:\t\t" + regExpressionPostfix);
-            argSBStats.AppendLine();
-
-            TransitionState stateStartNfa = CreateNfa(regExpressionPostfix);
-            argSBStats.AppendLine();
-            argSBStats.AppendLine("NFA Table:");
-            lineLength = GetSerializedFsa(stateStartNfa, argSBStats);
-            argSBStats.AppendFormat(("").PadRight(lineLength, '*'));
-            argSBStats.AppendLine();
-
-            TransitionState.ResetCounter();
-            TransitionState stateStartDfa = ConvertToDfa(stateStartNfa);
-            argSBStats.AppendLine();
-            argSBStats.AppendLine("DFA Table:");
-            lineLength = GetSerializedFsa(stateStartDfa, argSBStats);
-            argSBStats.AppendFormat(("").PadRight(lineLength, '*'));
-            argSBStats.AppendLine();
-
-            TransitionState stateStartDfaM = ReduceDfa(stateStartDfa);
-            _startingDFAState = stateStartDfaM;
-            argSBStats.AppendLine();
-            argSBStats.AppendLine("DFA M' Table:");
-            lineLength = GetSerializedFsa(stateStartDfaM, argSBStats);
-            argSBStats.AppendFormat(("").PadRight(lineLength, '*'));
-            argSBStats.AppendLine();
-
-            return CompilationStatus.SUCCESS;
-        }
-
-        public CompilationStatus Compile(string sPattern)
-        {
-            var vaidationInfo = _expressionValidator.Validate(sPattern);
-
-            UpdateValidationInfo(vaidationInfo);
-
-            if (vaidationInfo.ErrorCode != CompilationStatus.SUCCESS)
-            {
-                return vaidationInfo.ErrorCode;
-            }
-
-            TransitionState.ResetCounter();
-            string sRegExConcat = vaidationInfo.FormattedString;
-
-            string sRegExPostfix = ConvertToPostfix(sRegExConcat);
-
-            TransitionState stateStartNfa = CreateNfa(sRegExPostfix);
-
-            TransitionState.ResetCounter();
-            TransitionState stateStartDfa = ConvertToDfa(stateStartNfa);
-            _startingDFAState = stateStartDfa;
-
-            _startingDFAState = ReduceDfa(stateStartDfa);
-
-            return CompilationStatus.SUCCESS;
         }
 
         private Hashset Eclosure(TransitionState stateStart)
@@ -663,123 +698,145 @@ namespace RegularExpressionParser.BusinessLogic
             return "{" + s + "}";
         }
 
-        static internal void GetAllStateAndInput(TransitionState stateStart, Hashset setAllState, Hashset setInputSymbols)
+        private bool IsWildCard(TransitionState state)
         {
-            Hashset setUnprocessed = new Hashset();
-
-            setUnprocessed.AddElement(stateStart);
-
-            while (setUnprocessed.Count > 0)
+            return (state == state.GetSingleTransition(MetaSymbol.ANY_ONE_CHAR_TRANS));
+        }
+        private void UpdateValidationInfo(ValidationInfo vi)
+        {
+            if (vi.ErrorCode == CompilationStatus.SUCCESS)
             {
-                TransitionState state = (TransitionState)setUnprocessed[0];
+                _matchAtEnd = vi.MatchAtEnd;
+                _matchAtStart = vi.MatchAtStart;
+            }
 
-                setAllState.AddElement(state);
-                setUnprocessed.RemoveElement(state);
+            _lastCompilationStatus = vi.ErrorCode;
+            _lastErrorIndex = vi.ErrorStartAt;
+            _lastErrorLength = vi.ErrorLength;
+        }
 
-                foreach (object objToken in state.GetAllKeys())
+        private void ProcessWildCard(TransitionState state, string sSearchIn, ref int nCurrIndex, int nSearchUpTo)
+        {
+            TransitionState toState = null;
+            int nIndex = nCurrIndex;
+
+            while (nIndex <= nSearchUpTo)
+            {
+                char ch = sSearchIn[nIndex];
+
+                toState = state.GetSingleTransition(ch.ToString());
+
+                if (toState != null)
                 {
-                    string sSymbol = (string)objToken;
-                    setInputSymbols.AddElement(sSymbol);
-
-                    TransitionState[] arrTrans = state.GetTransitions(sSymbol);
-
-                    if (arrTrans != null)
-                    {
-                        foreach (TransitionState stateEpsilon in arrTrans)
-                        {
-                            if (!setAllState.ElementExist(stateEpsilon))
-                            {
-                                setUnprocessed.AddElement(stateEpsilon);
-                            }
-                        }
-                    }
+                    nCurrIndex = nIndex;
                 }
+                nIndex++;
             }
         }
 
-        static internal int GetSerializedFsa(TransitionState stateStart, StringBuilder sb)
-        {
-            Hashset setAllState = new Hashset();
-            Hashset setAllInput = new Hashset();
-            GetAllStateAndInput(stateStart, setAllState, setAllInput);
-            return GetSerializedFsa(stateStart, setAllState, setAllInput, sb);
-        }
 
-        static internal int GetSerializedFsa(TransitionState stateStart, Hashset setAllState,
-            Hashset setAllSymbols, StringBuilder sb)
+
+        public CompilationStatus CompileWithStats(string argPattern, StringBuilder argSBStats)
         {
+            if (argSBStats == null)
+            {
+                return Compile(argPattern);
+            }
+
+            TransitionState.ResetCounter();
+
             int lineLength = 0;
-            int minWidth = 6;
-            string line = String.Empty;
-            string format = String.Empty;
-            setAllSymbols.RemoveElement(MetaSymbol.EPSILON);
-            setAllSymbols.AddElement(MetaSymbol.EPSILON);
 
-            object[] symbolObjects = new object[setAllSymbols.Count + 1];
-            symbolObjects[0] = "State";
-            format = "{0,-8}";
-            for (int i = 0; i < setAllSymbols.Count; i++)
+            ValidationInfo vi = _expressionValidator.Validate(argPattern);
+
+            UpdateValidationInfo(vi);
+
+            if (vi.ErrorCode != CompilationStatus.SUCCESS)
             {
-                string sSymbol = setAllSymbols[i].ToString();
-                symbolObjects[i + 1] = sSymbol;
-
-                format += " | ";
-                format += "{" + (i + 1).ToString() + ",-" + Math.Max(Math.Max(sSymbol.Length, minWidth), sSymbol.ToString().Length) + "}";
+                return vi.ErrorCode;
             }
 
-            line = String.Format(format, symbolObjects);
-            lineLength = Math.Max(lineLength, line.Length);
-            sb.AppendLine(("").PadRight(lineLength, '-'));
-            sb.AppendLine(line);
-            sb.AppendLine(("").PadRight(lineLength, '-'));
+            string regExpressionPostfix = ConvertToPostfix(vi.FormattedString);
 
-            int nTransCount = 0;
-            foreach (object objState in setAllState)
+            argSBStats.AppendLine("Original pattern:\t\t" + argPattern);
+            argSBStats.AppendLine("Pattern after formatting:\t" + vi.FormattedString);
+            argSBStats.AppendLine("Pattern after postfix:\t\t" + regExpressionPostfix);
+            argSBStats.AppendLine();
+
+            TransitionState stateStartNfa = CreateNfa(regExpressionPostfix);
+            argSBStats.AppendLine();
+            argSBStats.AppendLine("NFA Table:");
+            lineLength = GetSerializedFsa(stateStartNfa, argSBStats);
+            argSBStats.AppendFormat(("").PadRight(lineLength, '*'));
+            argSBStats.AppendLine();
+
+            TransitionState.ResetCounter();
+            TransitionState stateStartDfa = ConvertToDfa(stateStartNfa);
+            argSBStats.AppendLine();
+            argSBStats.AppendLine("DFA Table:");
+            lineLength = GetSerializedFsa(stateStartDfa, argSBStats);
+            argSBStats.AppendFormat(("").PadRight(lineLength, '*'));
+            argSBStats.AppendLine();
+
+            TransitionState stateStartDfaM = ReduceDfa(stateStartDfa);
+            _startingDFAState = stateStartDfaM;
+            argSBStats.AppendLine();
+            argSBStats.AppendLine("DFA M' Table:");
+            lineLength = GetSerializedFsa(stateStartDfaM, argSBStats);
+            argSBStats.AppendFormat(("").PadRight(lineLength, '*'));
+            argSBStats.AppendLine();
+
+            return CompilationStatus.SUCCESS;
+        }
+
+        public CompilationStatus Compile(string sPattern)
+        {
+            var vaidationInfo = _expressionValidator.Validate(sPattern);
+
+            UpdateValidationInfo(vaidationInfo);
+
+            if (vaidationInfo.ErrorCode != CompilationStatus.SUCCESS)
             {
-                TransitionState state = (TransitionState)objState;
-                symbolObjects[0] = (state.Equals(stateStart) ? ">" + state.ToString() : state.ToString());
-
-                for (int i = 0; i < setAllSymbols.Count; i++)
-                {
-                    string sSymbol = setAllSymbols[i].ToString();
-
-                    TransitionState[] arrStateTo = state.GetTransitions(sSymbol);
-                    string sTo = String.Empty;
-                    if (arrStateTo != null)
-                    {
-                        nTransCount += arrStateTo.Length;
-                        sTo = arrStateTo[0].ToString();
-
-                        for (int j = 1; j < arrStateTo.Length; j++)
-                        {
-                            sTo += ", " + arrStateTo[j].ToString();
-                        }
-                    }
-                    else
-                    {
-                        sTo = "--";
-                    }
-                    symbolObjects[i + 1] = sTo;
-                }
-
-                line = String.Format(format, symbolObjects);
-                sb.AppendLine(line);
-                lineLength = Math.Max(lineLength, line.Length);
+                return vaidationInfo.ErrorCode;
             }
 
-            format = "State Count: {0}, Input Symbol Count: {1}, Transition Count: {2}";
-            line = String.Format(format, setAllState.Count, setAllSymbols.Count, nTransCount);
-            lineLength = Math.Max(lineLength, line.Length);
-            sb.AppendLine(("").PadRight(lineLength, '-'));
-            sb.AppendLine(line);
-            lineLength = Math.Max(lineLength, line.Length);
-            setAllSymbols.RemoveElement(MetaSymbol.EPSILON);
+            TransitionState.ResetCounter();
+            string sRegExConcat = vaidationInfo.FormattedString;
 
-            return lineLength;
+            string sRegExPostfix = ConvertToPostfix(sRegExConcat);
+
+            TransitionState stateStartNfa = CreateNfa(sRegExPostfix);
+
+            TransitionState.ResetCounter();
+            TransitionState stateStartDfa = ConvertToDfa(stateStartNfa);
+            _startingDFAState = stateStartDfa;
+
+            _startingDFAState = ReduceDfa(stateStartDfa);
+
+            return CompilationStatus.SUCCESS;
+        }
+        public bool IsReady()
+        {
+            return (_startingDFAState != null);
+        }
+
+        public int GetLastErrorPosition()
+        {
+            return _lastErrorIndex;
+        }
+
+        public CompilationStatus GetLastErrorCode()
+        {
+            return _lastCompilationStatus;
+        }
+
+        public int GetLastErrorLength()
+        {
+            return _lastErrorLength;
         }
 
         public bool FindMatch(string sSearchIn, int nSearchStartAt,
-                              int nSearchEndAt, ref int nFoundBeginAt, ref int nFoundEndAt)
+                             int nSearchEndAt, ref int nFoundBeginAt, ref int nFoundEndAt)
         {
             if (_startingDFAState == null || nSearchStartAt < 0)
             {
@@ -874,63 +931,6 @@ namespace RegularExpressionParser.BusinessLogic
             }
 
             return true;
-        }
-
-        private bool IsWildCard(TransitionState state)
-        {
-            return (state == state.GetSingleTransition(MetaSymbol.ANY_ONE_CHAR_TRANS));
-        }
-
-        private void ProcessWildCard(TransitionState state, string sSearchIn, ref int nCurrIndex, int nSearchUpTo)
-        {
-            TransitionState toState = null;
-            int nIndex = nCurrIndex;
-
-            while (nIndex <= nSearchUpTo)
-            {
-                char ch = sSearchIn[nIndex];
-
-                toState = state.GetSingleTransition(ch.ToString());
-
-                if (toState != null)
-                {
-                    nCurrIndex = nIndex;
-                }
-                nIndex++;
-            }
-        }
-
-        public bool IsReady()
-        {
-            return (_startingDFAState != null);
-        }
-
-        public int GetLastErrorPosition()
-        {
-            return _lastErrorIndex;
-        }
-
-        public CompilationStatus GetLastErrorCode()
-        {
-            return _lastCompilationStatus;
-        }
-
-        public int GetLastErrorLength()
-        {
-            return _lastErrorLength;
-        }
-
-        private void UpdateValidationInfo(ValidationInfo vi)
-        {
-            if (vi.ErrorCode == CompilationStatus.SUCCESS)
-            {
-                _matchAtEnd = vi.MatchAtEnd;
-                _matchAtStart = vi.MatchAtStart;
-            }
-
-            _lastCompilationStatus = vi.ErrorCode;
-            _lastErrorIndex = vi.ErrorStartAt;
-            _lastErrorLength = vi.ErrorLength;
         }
     }
 }
